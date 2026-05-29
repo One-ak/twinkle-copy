@@ -36,7 +36,8 @@ import {
 } from "@/data/universe";
 import { useLoveBackend } from "@/lib/useLoveBackend";
 
-const trackSource = "/api/audio/din-chadheya";
+const trackSource = "/audio/din-chadheya.mp3";
+const fallbackTrackSource = "/api/audio/din-chadheya";
 
 function useMusicReactive() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -69,59 +70,32 @@ function useMusicReactive() {
     return contextRef.current;
   }, []);
 
-  const startSyntheticPad = useCallback(
-    (context: AudioContext) => {
-      if (synthRef.current) {
-        synthRef.current.gain.gain.setTargetAtTime(volume * (ducking ? 0.3 : 0.46), context.currentTime, 0.12);
-        syntheticModeRef.current = true;
-        return;
-      }
-
-      const gain = context.createGain();
-      const low = context.createOscillator();
-      const high = context.createOscillator();
-      low.type = "sine";
-      high.type = "triangle";
-      low.frequency.value = 98;
-      high.frequency.value = 196;
-      gain.gain.value = 0.0001;
-      low.connect(gain);
-      high.connect(gain);
-      gain.connect(analyserRef.current!);
-      low.start();
-      high.start();
-      gain.gain.setTargetAtTime(volume * (ducking ? 0.3 : 0.46), context.currentTime, 0.18);
-      synthRef.current = { gain, oscillators: [low, high] };
-      syntheticModeRef.current = true;
-    },
-    [ducking, volume]
-  );
-
   const play = useCallback(async () => {
     const context = ensureContext();
     if (!context || !analyserRef.current) return;
+    const analyser = analyserRef.current;
 
     await context.resume();
-    const hasTrack = await fetch(trackSource, { method: "HEAD" })
-      .then((response) => response.ok)
-      .catch(() => false);
 
-    if (hasTrack && audioRef.current) {
+    const tryPlayTrack = async (source: string) => {
+      if (!audioRef.current) return false;
       syntheticModeRef.current = false;
       if (!sourceRef.current) {
         sourceRef.current = context.createMediaElementSource(audioRef.current);
-        sourceRef.current.connect(analyserRef.current);
+        sourceRef.current.connect(analyser);
       }
-      audioRef.current.src = trackSource;
+      if (!audioRef.current.src.endsWith(source)) {
+        audioRef.current.src = source;
+      }
       audioRef.current.loop = true;
       audioRef.current.volume = volume * (ducking ? 0.55 : 1);
       await audioRef.current.play();
-    } else {
-      startSyntheticPad(context);
-    }
+      return true;
+    };
 
-    setPlaying(true);
-  }, [ducking, ensureContext, startSyntheticPad, volume]);
+    const didPlayTrack = await tryPlayTrack(trackSource).catch(() => tryPlayTrack(fallbackTrackSource).catch(() => false));
+    setPlaying(didPlayTrack);
+  }, [ducking, ensureContext, volume]);
 
   const pause = useCallback(() => {
     audioRef.current?.pause();
@@ -248,7 +222,7 @@ function IntroOverlay({
                   exit={{ opacity: 0, filter: "blur(10px)" }}
                   transition={{ duration: 2.15, ease: [0.22, 1, 0.36, 1] }}
                 >
-                  Twinkle
+                  Twinkle darling
                 </motion.div>
               ) : (
                 <div className="intro-title-space" />
@@ -321,7 +295,7 @@ function MusicOrb({
           onChange={(event) => setVolume(Number(event.target.value))}
         />
       </label>
-      <audio ref={audioRef} preload="none" />
+      <audio ref={audioRef} preload="auto" src={trackSource} />
     </div>
   );
 }
@@ -1148,10 +1122,11 @@ function FloatingChatWidget({
   return (
     <>
       <motion.button
-        className="fixed bottom-[clamp(1rem,3vw,2rem)] right-[clamp(1rem,3vw,2rem)] z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[linear-gradient(135deg,#cdb9ff,#f2a8d1)] text-[#15092d] shadow-[0_0_20px_rgba(205,185,255,0.4)]"
+        className="chat-launcher"
         whileHover={{ scale: 1.1, rotate: 10 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setIsOpen(true)}
+        aria-label="Open chat"
       >
         <MessageCircle size={28} />
       </motion.button>
@@ -1163,7 +1138,7 @@ function FloatingChatWidget({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 50, scale: 0.9 }}
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className="fixed bottom-[clamp(5rem,8vw,6rem)] right-[clamp(1rem,3vw,2rem)] z-50 w-[calc(100vw-2rem)] max-w-[400px] origin-bottom-right"
+            className="chat-popover"
           >
             <div className="relative">
               <button
@@ -1366,12 +1341,12 @@ export function LoveUniverse() {
 
   const handleStartBurst = useCallback(() => {
     setIntroState("bursting");
-  }, []);
+    void music.play();
+  }, [music]);
 
   const handleBurstComplete = useCallback(() => {
     setIntroState("entered");
-    music.play();
-  }, [music]);
+  }, []);
 
   const handleSacredVisible = useCallback(
     (visible: boolean) => {

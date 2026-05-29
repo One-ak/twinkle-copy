@@ -759,6 +759,37 @@ button {
   backdrop-filter: blur(24px);
 }
 
+.chat-launcher {
+  position: fixed;
+  right: clamp(1rem, 3vw, 2rem);
+  bottom: clamp(1rem, 3vw, 2rem);
+  z-index: 45;
+  display: flex;
+  width: 3.5rem;
+  height: 3.5rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(247, 240, 255, 0.28);
+  border-radius: 999px;
+  color: #15092d;
+  background:
+    radial-gradient(circle at 34% 26%, rgba(255, 255, 255, 0.92), transparent 18%),
+    linear-gradient(135deg, #d9c9ff, #f2a8d1);
+  box-shadow:
+    0 0 24px rgba(205, 185, 255, 0.48),
+    0 14px 44px rgba(0, 0, 0, 0.36);
+}
+
+.chat-popover {
+  position: fixed;
+  right: clamp(1rem, 3vw, 2rem);
+  bottom: clamp(5rem, 8vw, 6rem);
+  z-index: 50;
+  width: calc(100vw - 2rem);
+  max-width: 400px;
+  transform-origin: bottom right;
+}
+
 .wave-ring {
   position: relative;
   display: grid;
@@ -837,6 +868,16 @@ button {
   overflow: hidden;
 }
 
+.chat-panel.glass-panel {
+  background:
+    linear-gradient(180deg, rgba(30, 18, 52, 0.92), rgba(12, 6, 22, 0.94)),
+    rgba(5, 2, 11, 0.9);
+  box-shadow:
+    0 28px 90px rgba(0, 0, 0, 0.72),
+    0 0 58px rgba(205, 185, 255, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
 .message-list {
   display: grid;
   align-content: end;
@@ -850,7 +891,7 @@ button {
   border: 1px solid rgba(247, 240, 255, 0.13);
   border-radius: 18px;
   padding: 0.82rem 0.95rem;
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .message-bubble.me {
@@ -858,7 +899,7 @@ button {
   border-bottom-right-radius: 6px;
   background:
     linear-gradient(135deg, rgba(116, 76, 255, 0.32), rgba(242, 168, 209, 0.15)),
-    rgba(255, 255, 255, 0.08);
+    rgba(255, 255, 255, 0.14);
 }
 
 .message-bubble.her {
@@ -1054,9 +1095,63 @@ button {
 
   .music-orb {
     left: 0.75rem;
+    right: auto;
+    bottom: 0.75rem;
+    width: calc(100vw - 5.9rem);
+    min-height: 3.5rem;
+    grid-template-columns: 3.5rem minmax(0, 1fr);
+    gap: 0.62rem;
+    padding: 0;
+    border-radius: 999px;
+    background:
+      linear-gradient(90deg, rgba(21, 9, 45, 0.94), rgba(48, 25, 78, 0.82)),
+      rgba(0, 0, 0, 0.5);
+  }
+
+  .music-orb label {
+    display: none;
+  }
+
+  .music-orb .wave-ring,
+  .chat-launcher {
+    width: 3.5rem;
+    height: 3.5rem;
+    flex: 0 0 3.5rem;
+  }
+
+  .music-orb .min-w-0 {
+    padding-right: 0.7rem;
+  }
+
+  .music-orb p {
+    font-size: 0.82rem;
+  }
+
+  .chat-launcher {
     right: 0.75rem;
     bottom: 0.75rem;
+    z-index: 46;
+  }
+
+  .chat-popover {
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: 5rem;
     width: auto;
+    max-width: none;
+  }
+
+  .chat-panel {
+    min-height: 0;
+    max-height: min(72vh, 560px);
+  }
+
+  .message-list {
+    max-height: 44vh;
+  }
+
+  .chat-panel textarea {
+    min-height: 4rem;
   }
 
   .constellation-star {
