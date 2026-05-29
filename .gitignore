@@ -4,4 +4,3 @@ out
 dist
 .env*.local
 *.tsbuildinfo
-public/audio/din-chadheya.mp3

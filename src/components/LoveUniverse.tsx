@@ -37,7 +37,6 @@ import {
 import { useLoveBackend } from "@/lib/useLoveBackend";
 
 const trackSource = "/audio/din-chadheya.mp3";
-const fallbackTrackSource = "/api/audio/din-chadheya";
 
 function useMusicReactive() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -71,30 +70,33 @@ function useMusicReactive() {
   }, []);
 
   const play = useCallback(async () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    syntheticModeRef.current = false;
+    audio.loop = true;
+    audio.preload = "auto";
+    audio.volume = volume * (ducking ? 0.55 : 1);
+    if (!audio.currentSrc || !audio.currentSrc.endsWith(trackSource)) {
+      audio.src = trackSource;
+      audio.load();
+    }
+
     const context = ensureContext();
-    if (!context || !analyserRef.current) return;
-    const analyser = analyserRef.current;
+    const resumePromise = context?.resume().catch(() => undefined);
 
-    await context.resume();
-
-    const tryPlayTrack = async (source: string) => {
-      if (!audioRef.current) return false;
-      syntheticModeRef.current = false;
-      if (!sourceRef.current) {
-        sourceRef.current = context.createMediaElementSource(audioRef.current);
-        sourceRef.current.connect(analyser);
+    if (context && analyserRef.current && !sourceRef.current) {
+      try {
+        sourceRef.current = context.createMediaElementSource(audio);
+        sourceRef.current.connect(analyserRef.current);
+      } catch {
+        sourceRef.current = null;
       }
-      if (!audioRef.current.src.endsWith(source)) {
-        audioRef.current.src = source;
-      }
-      audioRef.current.loop = true;
-      audioRef.current.volume = volume * (ducking ? 0.55 : 1);
-      await audioRef.current.play();
-      return true;
-    };
+    }
 
-    const didPlayTrack = await tryPlayTrack(trackSource).catch(() => tryPlayTrack(fallbackTrackSource).catch(() => false));
-    setPlaying(didPlayTrack);
+    const playResult = await audio.play().then(() => true).catch(() => false);
+    await resumePromise;
+    setPlaying(playResult && !audio.paused);
   }, [ducking, ensureContext, volume]);
 
   const pause = useCallback(() => {
@@ -103,6 +105,27 @@ function useMusicReactive() {
       synthRef.current.gain.gain.setTargetAtTime(0.0001, contextRef.current.currentTime, 0.12);
     }
     setPlaying(false);
+  }, []);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const markPlaying = () => setPlaying(true);
+    const markStopped = () => setPlaying(false);
+    audio.addEventListener("play", markPlaying);
+    audio.addEventListener("playing", markPlaying);
+    audio.addEventListener("pause", markStopped);
+    audio.addEventListener("ended", markStopped);
+    audio.addEventListener("error", markStopped);
+
+    return () => {
+      audio.removeEventListener("play", markPlaying);
+      audio.removeEventListener("playing", markPlaying);
+      audio.removeEventListener("pause", markStopped);
+      audio.removeEventListener("ended", markStopped);
+      audio.removeEventListener("error", markStopped);
+    };
   }, []);
 
   useEffect(() => {
